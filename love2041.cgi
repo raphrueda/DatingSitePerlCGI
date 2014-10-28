@@ -29,14 +29,34 @@ sub browse_screen {
 	my $student_to_show  = $students[$n];
 	my $profile_filename = "$student_to_show/profile.txt";
 	open my $p, "$profile_filename" or die "can not open $profile_filename: $!";
-	$profile = join '', <$p>;
+	%details = ();
+	while($line = <$p>){
+		if($line =~ /\s*([^ ]*):\s*$/){
+			$n = $1;
+		} else {
+			$line =~ s/^\s*//;
+			push(@{$details{$n}}, $line);
+		}
+	}
+	$profile = "";
+	foreach my $field(keys %details){
+		if($field =~ /^(name|email|password|courses)$/){
+			next;
+		}
+		$profile .= "$field\n";
+		foreach $item (@{$details{$field}}){
+			$profile .= "    $item";
+		}
+	}
 	close $p;
+	$prof_pic_loc = "$student_to_show/profile.jpg";
 	
-	return p,
-		start_form, "\n",
+	return  p,
+		start_form(-method=>"GET"), "\n",
+		img {src=>$prof_pic_loc, border=>"5"}, "\n",
 		pre($profile),"\n",
 		hidden('n', $n + 1),"\n",
-		submit('Next student'),"\n",
+		submit('Next student!'),"\n",
 		end_form, "\n",
 		p, "\n";
 }
