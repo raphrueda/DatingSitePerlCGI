@@ -124,6 +124,7 @@ sub profile_screen {
 	my $n = param('n') || 0;
 	my @students = glob("$students_dir/*");
 	$n = min(max($n, 0), $#students);
+	param('n', $n + 1);
 	my $student_to_show  = $students[$n];
 	my $profile_filename = "$student_to_show/profile.txt";
 	open my $p, "$profile_filename" or die "can not open $profile_filename: $!";
@@ -156,7 +157,8 @@ sub profile_screen {
 		img {src=>$prof_pic_loc, border=>"5"}, "\n",
 		pre($profile),"\n",
 		hidden('n', $n + 1),"\n",
-		submit('Return'),"\n",
+		submit('Next student!'),"\n",
+		submit('view_profile', ""), "\n",
 		"</div>",
 		hidden("user"),
 		hidden("pass"),
