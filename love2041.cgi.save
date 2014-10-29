@@ -69,7 +69,7 @@ sub verified {
 			}
 		}
 	} 
-	print "<div class=\"alert alert-danger\" role=\"alert\">Incorrect Username or Password</div>", "\n";
+	print "Incorrect Username and/or Password";
 	return 0;
 }
 
@@ -107,6 +107,8 @@ sub home_screen {
 		start_form(-method=>"GET"), "\n",
 		"<div class=\"container-fluid\" align=center>",
 		navigation(),
+		textfield("find_profile"),
+		submit("find"), "<br>",
 		submit("Match Me"),
 		@gallery,
 		"<div align=center style=\"clear:both; padding-top:50px\">", "\n",
@@ -126,31 +128,13 @@ sub home_screen {
 
 sub navigation {
 	return  "<nav class=\"navbar navbar-default\" role=\"navigation\">", "\n",
-		"    <div class=\"container-fluid\">", "\n",
-		"        <div class=\"row\">", "\n",
-		"            <div class=\"col-md-5\">", "\n",
-		"                <span class=\"navbar-brand\">LOVE2041 <small><span class=\"glyphicon glyphicon-heart\"></span> Find yo bae.</small></span>", "\n",
-		"            </div>", "\n",
-		"	     <div class=\"col-md-2\" style=\"padding-top:2px\"><button type=\"submit\" name=\"Match Me\" value=\"Match Me\" class=\"btn btn-danger btn-lg\">Find my Soulmate</div>", "\n",
-		"	     <div class=\"col-md-5\">", "\n",
-		"                <form class=\"navbar-form navbar-left\" role=\"search\">", "\n",
-		"                    <div class=\"input-group\" align=right style=\"width:300px; margin-left:auto; padding-top:8px\">", "\n",
-		"                        <input type=\"text\" name=\"find_profile\" class=\"form-control\" placeholder=\"Search\">", "\n",
-		"                        <span class=\"input-group-btn\"><button type=\"submit\" name=\"find\" value=\"find\" class=\"btn btn-default\">Search</button></span>", "\n",
-		"                    </div>", "\n",
-		"                </form>", "\n",
-		"            </div>", "\n",
-                "        </div>", "\n",
-		"    </div>", "\n",
+		"<div class=\"container-fluid\">", "\n",
 		"</nav>", "\n";
 }
 
 sub match_screen {
 	return  p,
 		start_form(-method=>"POST"), "\n",
-		"<div class=\"container-fluid\" align=center>", "\n",
-		navigation(),
-		"</div>", "\n",
 		end_form(), "\n",
 		p, "\n";
 }
