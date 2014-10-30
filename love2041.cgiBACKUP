@@ -14,30 +14,40 @@ warningsToBrowser(1);
 print page_header();
 
 # some globals used through the script
-$debug = 1;
+$debug = 0;
 $students_dir = "./students";
 
 # if user is logged in
-if(defined param("user") && defined param("pass") && verified(param("user"), param("pass"))){
+if(defined param("user") && defined param("pass") && verified(param("user"), param("pass")) && !defined param("logout")){
+	%user_id = ();
+	opendir(my $DIR, $students_dir);
+	while(my $entry = readdir $DIR){
+		next unless -d $students_dir . "/" . $entry;
+		next if $entry eq "." or $entry eq "..";
+		$user_id{$entry} = 0;
+	}
+	$i = 0;
+	foreach my $user(sort keys %user_id){
+		$user_id{$user} = $i++;
+	}
 	if(defined param("view_profile")){
-		%user_id = ();
-		opendir(my $DIR, $students_dir);
-		while(my $entry = readdir $DIR){
-                	next unless -d $students_dir . "/" . $entry;
-	                next if $entry eq "." or $entry eq "..";
-	                $user_id{$entry} = 0;
-        	}
-		$i = 0;
-		foreach my $user(sort keys %user_id){
-			$user_id{$user} = $i;
-			$i++;
-		}
 		param("n", $user_id{param("view_profile")});
 		print profile_screen();
+	} elsif(defined param("find") && defined param("find_profile")){
+		if(exists $user_id{param("find_profile")}){
+			param("n", $user_id{param("find_profile")});
+			print profile_screen();
+		} else {
+			print "User not found", home_screen();
+		}
+	} elsif(defined param("Match Me")){
+		print match_screen();
 	} else {
 		print home_screen();
 	}
 } else {
+	param("user", undef);
+	param("pass", undef);
 	print login_screen();
 }	
 
@@ -59,7 +69,7 @@ sub verified {
 			}
 		}
 	} 
-	print "Incorrect Username and/or Password";
+	print "<div class=\"alert alert-danger\" role=\"alert\">Incorrect Username or Password</div>", "\n";
 	return 0;
 }
 
@@ -83,37 +93,88 @@ sub home_screen {
 	}
 	@users = sort @users;
 	@gallery = ();
+	push @gallery, "<div align=center style=\"width:1350px; margin:100px auto\">";
 	for my $n ($page..$page + 9){
 		my $prof_pic = $students_dir . "/" . @users[$n] . "/profile.jpg";
 		push @gallery, "<div style=\"float:left; margin:5px\">\n";
-		push @gallery, img {src=>$prof_pic, border=>"1"}, "\n <br> \n";
-		push @gallery, submit("view_profile", "@users[$n]");
+#		push @gallery, image_button(-src=>$prof_pic, -name=>"view_profile", -value=>"@users[$n]", -border=>"1");
+		push @gallery, img{-src=>$prof_pic, -class=>"img-thumbnail"}, "<br>";
+		push @gallery, "<button type=\"submit\" name=\"view_profile\" value=@users[$n] class=\"btn btn-primary btn-sm\">@users[$n]</button>";
 		push @gallery, "</div>\n";
 	}
+	push @gallery, "</div>";
 	return  p, "\n",
 		start_form(-method=>"GET"), "\n",
-		"<div align=center style=\"width:1330px; margin:100px auto\">",
+		"<div class=\"container-fluid\" align=center>",
+		navigation(),
 		@gallery,
-		"</div>",
-		"<div align=center style=\"clear:both; padding-top:50px\">",
-		hidden("page"),
-		hidden("user"),
-		hidden("pass"),
-		submit("prev_page"),
-		submit("next_page"),
-		"</div>",
-		end_form,
+		"<div align=center style=\"clear:both; padding-top:50px\">", "\n",
+		hidden("page"), "\n",
+		hidden("user"), "\n",
+		hidden("pass"), "\n",
+		"<button type=\"submit\" name=\"prev_page\" class=\"btn btn-primary\" align=left>Prev</btn>", "\n",
+#		submit("prev_page"), "\n".
+		"<button type=\"submit\" name=\"next_page\" class=\"btn btn-primary\" align=right>Next</btn>", "\n",
+#		submit("next_page"), "\n",
+		"</div>", "\n",
+		submit("logout"), "\n",
+		"</div>", "\n",
+		end_form, "\n",
+		p, "\n";
+}
+
+sub navigation {
+	return  "<nav class=\"navbar navbar-default\" role=\"navigation\">", "\n",
+		"    <div class=\"container-fluid\">", "\n",
+		"        <div class=\"row\">", "\n",
+		"            <div class=\"col-md-5\">", "\n",
+		"                <span class=\"navbar-brand\">LOVE2041 <small><span class=\"glyphicon glyphicon-heart\"></span> Find yo bae.</small></span>", "\n",
+		"            </div>", "\n",
+		"	     <div class=\"col-md-2\" style=\"padding-top:2px\"><button type=\"submit\" name=\"Match Me\" value=\"Match Me\" class=\"btn btn-danger\">Find my Soulmate</div>", "\n",
+		"	     <div class=\"col-md-5\">", "\n",
+		"                <form class=\"navbar-form navbar-left\" role=\"search\">", "\n",
+		"                    <div class=\"input-group\" align=right style=\"width:300px; margin-left:auto; padding-top:8px\">", "\n",
+		"                        <input type=\"text\" name=\"find_profile\" class=\"form-control\" placeholder=\"Search\">", "\n",
+		"                        <span class=\"input-group-btn\"><button type=\"submit\" name=\"find\" value=\"find\" class=\"btn btn-default\">Search</button></span>", "\n",
+		"                    </div>", "\n",
+		"                </form>", "\n",
+		"            </div>", "\n",
+                "        </div>", "\n",
+		"    </div>", "\n",
+		"</nav>", "\n";
+}
+
+sub match_screen {
+	return  p,
+		start_form(-method=>"POST"), "\n",
+		"<div class=\"container-fluid\" align=center>", "\n",
+		navigation(),
+		"</div>", "\n",
+		end_form(), "\n",
 		p, "\n";
 }
 
 sub login_screen {
 	return  p, "\n",
 		start_form(-method=>"POST"), "\n",
-		textfield("user", "username"), "\n",
-		p, "\n",
-		password_field("pass", "password"), "\n",
-		p, "\n",
-		submit("Login"), "\n",
+		"<div class=\"container\" align=center style=\"margin-top:25vh\">", "\n",
+		"<h1>LOVE2041<small><br>Find yo bae.</small></h1>", "\n",
+		"    <div style=\"width:500px; margin-top:50px\" align=center>", "\n",
+		"        <div>", "\n",
+		"            <div class=\"input-group input-group-lg\" style=\"margin-bottom:10px\">", "\n",
+		"                <span class=\"input-group-addon\"><span class=\"glyphicon glyphicon-user\"></span></span>", "\n",
+		"                <input type=\"text\" class=\"form-control\" placeholder=\"Username\" name=\"user\">", "\n",
+		"            </div>", "\n",
+		"            <div class=\"input-group input-group-lg\" style=\"margin-bottom:10px\">", "\n",
+		"                <span class=\"input-group-addon\"><span class=\"glyphicon glyphicon-lock\"></span></span>", "\n",
+		"                <input type=\"password\" class=\"form-control\" placeholder=\"Password\" name=\"pass\">", "\n",
+		"            </div>", "\n",
+		"        </div>", "\n",
+		"        <div>", "\n",
+		"            <button type=\"submit\" name=\"Login\" class=\"btn btn-success btn-lg\"><span class=\"glyphicon glyphicon-log-in\"></span></button>", "\n",
+		"        </div>", "\n",
+		"    </div>", "\n",
+		"</div>", "\n",
 		end_form, "\n",
 		hidden("user"),
 		hidden("pass"),
@@ -124,7 +185,6 @@ sub profile_screen {
 	my $n = param('n') || 0;
 	my @students = glob("$students_dir/*");
 	$n = min(max($n, 0), $#students);
-	param('n', $n + 1);
 	my $student_to_show  = $students[$n];
 	my $profile_filename = "$student_to_show/profile.txt";
 	open my $p, "$profile_filename" or die "can not open $profile_filename: $!";
@@ -157,8 +217,7 @@ sub profile_screen {
 		img {src=>$prof_pic_loc, border=>"5"}, "\n",
 		pre($profile),"\n",
 		hidden('n', $n + 1),"\n",
-		submit('Next student!'),"\n",
-		submit('view_profile', ""), "\n",
+		submit('Return'),"\n",
 		"</div>",
 		hidden("user"),
 		hidden("pass"),
@@ -170,9 +229,8 @@ sub profile_screen {
 # HTML placed at bottom of every screen
 #
 sub page_header {
-	return header,
-   		start_html("-title"=>"LOVE2041", -bgcolor=>"#FEDCBA"),
- 		center(h2(i("LOVE2041"))), "\n";
+	return header,	
+   		start_html("-title"=>"LOVE2041", -bgcolor=>"#FEDCBA", -head => [ Link( { -rel => 'stylesheet', -type => 'text/css', -href => "https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css"}), ]);
 }
 
 #
