@@ -40,9 +40,12 @@ if(defined param("user") && defined param("pass") && verified(param("user"), par
     	    param("n", $user_id{param("find_profile")});
 	    print profile_screen();
 	} else {
-	    print "User not found", home_screen();
+	    print "<div class=\"alert alert-danger alert-dismissable\" role=\"alert\">",
+		  "    User not found",
+		  "</div>", "\n", 
+		  home_screen();
 	}
-    } elsif(defined param("Match Me")){
+    } elsif(defined param("match") || defined param("match_page")){
 	print match_screen();
     } else {
 	print home_screen();
@@ -134,7 +137,7 @@ sub navigation {
 	    "        <table class=\"table\" align=center width=\"100%\">", "\n",
 	    "            <tr valign=\"center\">", "\n",
 	    "                <td width=\"33%\" align=\"right\"><span class=\"navbar-brand\">LOVE2041 <small><span class=\"glyphicon glyphicon-heart\"></span> Find yo bae.</small></span></td>", "\n",
-	    "	             <td width=\"34%\" align=\"center\"><button type=\"submit\" name=\"Match Me\" value=\"Match Me\" class=\"btn btn-danger\">Find my Soulmate</button></td>", "\n",
+	    "	             <td width=\"34%\" align=\"center\"><button type=\"submit\" name=\"match\" value=\"Match Me\" class=\"btn btn-danger\">Find my Soulmate</button></td>", "\n",
 	    "	             <td width=\"23%\" align=\"center\">", "\n",
 	    "                    <form class=\"navbar-form navbar-left\" role=\"search\">", "\n",
 	    "                        <div class=\"input-group\" align=right style=\"width:300px; margin-left:auto; padding-top:8px\">", "\n",
@@ -216,19 +219,12 @@ sub match_screen {
 	push @{$my_pref{"gender"}}, "any"; #assume no gender pref
     }
     if(!defined @{$my_pref{"age"}}){
+	my $age;
 	if($my_info{"birthdate"}[0] =~ /([0-9]{2})\/([0-9]{2})\/([0-9]{4})/){
-            $b_day = $1 - 1;$b_month = $2 - 1;$b_year = $3 - 1;
-        } elsif($my_info{"birthdate"}[0] =~ /([0-9]{4})\/([0-9]{2})\/([0-9]{2})/){
-            $b_day = $3 - 1;$b_month = $2 - 1;$b_year = $1 - 1;
-        }
-        
-	($day, $month, $year) = (localtime)[3..5];
-        $year += 1900;
-
-        my $age = $year - $b_year;
-        $age-- unless sprintf("%02d%02d", $month, $day)
-                   >= sprintf("%02d%02d", $b_month, $b_day); #birthday has not passed yet
-
+            $age = calc_age($1, $2 - 1, $3);
+        } elsif($my_info{"birthdate"}[0] =~ /([0-9]{4})\/([0-9]{2})\/([0-9]{2})/) {
+	    $age = calc_age($3, $2 - 1, $1);
+	}
         push @{$my_pref{"age"}}, ((($age/2) + 7), (($age - 7) * 2)); #scientifically proven for min/max age
     }
     if(!defined @{$my_pref{"hair"}}){
@@ -249,6 +245,7 @@ sub match_screen {
         next if $entry eq "." or $entry eq ".." or $entry eq $user;
         push @users, $entry;
     }
+    closedir $DIR;
 
     %my_movies = ();
     foreach (@{$my_info{"favourite_movies"}}){
@@ -301,19 +298,13 @@ sub match_screen {
 	$height_score = 0;	#/20
 	$weight_score = 0;	#/20
 
+	my $age;
 	if($their_info{"birthdate"}[0] =~ /([0-9]{2})\/([0-9]{2})\/([0-9]{4})/){
-	    $b_day = $1 - 1;$b_month = $2 - 1;$b_year = $3 -1;
+	    $age = calc_age($1, $2 - 1, $3);
 	} elsif($their_info{"birthdate"}[0] =~ /([0-9]{4})\/([0-9]{2})\/([0-9]{2})/){
-	    $b_day = $3 - 1;$b_month = $2 - 1;$b_year = $1 -1;
+	    $age = calc_age($3, $2 - 1, $1);
 	}
-		
-	($day, $month, $year) = (localtime)[3..5];
-	$year += 1900;
-
-	my $age = $year - $b_year;
-	$age-- unless sprintf("%02d%02d", $month, $day)
-		   >= sprintf("%02d%02d", $b_month, $b_day); #birthday has not passed yet
-
+	
 	if($age >= $my_pref{"age"}[0] && $age <= $my_pref{"age"}[1]){
 	    $age_score = 20;
 	} elsif($age > $my_pref{"age"}[1]){
@@ -361,11 +352,11 @@ sub match_screen {
                 if($t_weight >= $min_weight && $t_weight <= $max_weight){
                     $weight_score = 10;
                 } elsif($t_weight > $max_weight){
-                    $weight_score = max(0, 20 - ($t_weight - $max_weight)*3);
-                    #-3 points for every 1kg above max
+                    $weight_score = max(0, 20 - ($t_weight - $max_weight)*2);
+                    #-2 points for every 1kg above max
                 } else {
-                    $weight_score = max(0, 20 - ($min_weight - $t_weight)*3);
-                    #-3 point for every  1kg below min
+                    $weight_score = max(0, 20 - ($min_weight - $t_weight)*2);
+                    #-2 point for every  1kg below min
                 }
 	    }
         } #no weight specified = 0 points
@@ -417,23 +408,48 @@ sub match_screen {
     @soulmates = sort {$scores{$b} <=> $scores{$a}} keys(%scores);
     @table = ();
     foreach(@soulmates){
-	push @table, "<tr><td align=\"right\"><button class=\"btn btn-primary btn-sm\" type=\"submit\" name=\"view_profile\" value=\"$_\">$_</button></td><td align=\"left\">$scores{$_}</td></tr>", "\n";
+	push @table, "<tr><td align=\"right\"><button class=\"btn btn-primary btn-sm\" type=\"submit\" name=\"view_profile\" value=\"$_\">$_</button></td><td align=\"left\">$scores{$_}</td></tr>\n";
+    }
+
+    my $page = param("match_page") || 0;
+    if(defined param("match_next")){
+        if($page + 10 <= $#soulmates){
+            $page = $page + 10
+	} else {
+            $page = $#soulmates;
+        }
+    } elsif(defined param("match_prev")) {
+        $page = $page - 10 if($page - 10 >= 0);
+    } else {
+	$page = 0;
+    }
+
+    param("match_page", $page);
+    $page_end = $page + 9;
+
+    @to_show = ();
+    for my $n($page..$page_end){
+	push @to_show, $table[$n];
     }
 
     return  p,
-	start_form(-method=>"POST"), "\n",
+	start_form(-method=>"GET"), "\n",
 	"<div class=\"container-fluid\" align=center>", "\n",
 	navigation(),
 	"<h1>", scalar @soulmates, " Matches Found</h1>", "\n",
-	"<table class=\"table table-striped\">", "\n",
+	"<table class=\"table table-striped\" style=\"width:750px\">", "\n",
 	"<col align=\"left\"><col align=\"right\">", "\n",
 	"<tr><th style=\"text-align:right\">Username</th><th>Compatibility Score</th></tr>", "\n",
-	@table,
+	@to_show,
 	"</table>", "\n",
+	"<button type=\"submit\" class=\"btn btn-primary\" name=\"match_prev\">Prev</button>", "\n",
+	"<button type=\"submit\" class=\"btn btn-primary\">Return</button>", "\n",
+	"<button type=\"submit\" class=\"btn btn-primary\" name=\"match_next\">Next</button>", "\n",
 	"</div>", "\n",
 	end_form(), "\n",
 	hidden("user"), "\n",
 	hidden("pass"), "\n",
+	hidden("match_page"), "\n",
 	p, "\n";
 }
 
@@ -473,6 +489,7 @@ sub profile_screen {
     open my $p, "$profile_filename" or die "can not open $profile_filename: $!";
     %details = ();
     while($line = <$p>){
+	chomp $line;
 	if($line =~ /\s*([^ ]*):\s*$/){
  	    $n = $1;
 	} else {
@@ -480,29 +497,111 @@ sub profile_screen {
 	    push(@{$details{$n}}, $line);
 	}
     }
-    $profile = "";
-    foreach my $field(keys %details){
-    	if($field =~ /^(name|email|password|courses)$/){
-	    next;
-	}
-	$profile .= "$field\n";
-	foreach $item (@{$details{$field}}){
-	    $profile .= "$item";
-	}
-        $profile .= "\n";
-    }
     close $p;
     $prof_pic_loc = "$student_to_show/profile.jpg";
 
+    %photos = ();
+    opendir(my $DIR, $student_to_show) or die "cannot open dir $student_to_show: $!";
+    while(my $entry = readdir $DIR){
+        next if($entry !~ /^photo[0-9]+\./);
+        $photos{$entry}++;
+    }
+    closedir $DIR;
+
+    @gallery = ();
+    foreach $photo (keys %photos){
+        push @gallery, "<img src=$student_to_show/$photo class=\"img-thumbnail\" style=\"margin-bottom:5px\">\n";
+    }
+
+    $student_to_show =~ s/^\.\/students\///;
+    $birthdate = $details{"birthdate"}[0];
+    my $age;
+    if($birthdate =~ /([0-9]{2})\/([0-9]{2})\/([0-9]{4})/){
+	$age = calc_age($1, $2 - 1, $3);
+    } elsif ($birthdate =~ /([0-9]{4})\/([0-9]{2})\/([0-9]{2})/){
+	$age = calc_age($3, $2 - 1, $1);
+    }
+    my $degree = $details{"degree"}[0];
+
+    @bio = ();
+    push @bio, "<tr><td>Age</td><td>$age</td></tr>\n";
+    push @bio, "<tr><td>Gender</td><td>" . ucfirst($details{"gender"}[0]) . "</td></tr>\n";
+    push @bio, "<tr><td>Degree</td><td>" . ucfirst($details{"degree"}[0]) . "</td></tr>\n";
+    if (defined $details{"hair_colour"}[0]){
+        push @bio, "<tr><td>Hair</td><td>" . ucfirst($details{"hair_colour"}[0]). "</td></tr>\n";
+    } else {	
+        push @bio, "<tr><td>Hair</td><td>Unknown</td></tr>\n";
+    }
+    if (defined $details{"height"}[0]){
+        push @bio, "<tr><td>Height</td><td>" . $details{"height"}[0]. "</td></tr>\n";
+    } else {
+        push @bio, "<tr><td>Height</td><td>Unknown</td></tr>\n";
+    }
+    if (defined $details{"weight"}[0]){
+        push @bio, "<tr><td>Weight</td><td>" . $details{"weight"}[0]. "</td></tr>\n";
+    } else {
+        push @bio, "<tr><td>Weight</td><td>Unknown</td></tr>\n";
+    }
+ 
+    @about = ();
+    push @about, "<tr><td>Favourite Movies</td><td>\n";
+    foreach $movie (@{$details{"favourite_movies"}}){
+	push @about, "$movie <br>\n";
+    }
+    push @about, "</td></tr>\n";
+
+    push @about, "<tr><td>Favourite Shows</td><td>\n";
+    foreach $show (@{$details{"favourite_TV_shows"}}){
+        push @about, "$show <br>\n";
+    }
+    push @about, "</td></tr>\n";
+
+    push @about, "<tr><td>Favourite Books</td><td>\n";
+    foreach $book (@{$details{"favourite_books"}}){
+        push @about, "$book <br>\n";
+    }
+    push @about, "</td></tr>\n";
+
+    push @about, "<tr><td>Favourite Bands</td><td>\n";
+    foreach $band (@{$details{"favourite_bands"}}){
+        push @about, "$band <br>\n";
+    }
+    push @about, "</td></tr>\n";
+
+    push @about, "<tr><td>Favourite Hobbies</td><td>\n";
+    foreach $hobby (@{$details{"favourite_hobbies"}}){
+        push @about, "$hobby <br>\n";
+    }
+    push @about, "</td></tr>\n";
+
     return  p, "\n",
 	    start_form(-method=>"POST"), "\n",
+	    "<div class=\"container-fluid\" align=center>", "\n",
 	    navigation(),
-	    "<div align=\"center\">", "\n",
-	    img {src=>$prof_pic_loc, border=>"5"}, "\n",
-	    pre($profile),"\n",
-	    hidden('n', $n + 1),"\n",
-	    submit('Return'),"\n",
-	    "</div>",
+	    "<div class=\"jumbotron\" align=\"center\">", "\n",
+	    "    <img class=\"img-circle\" src=$prof_pic_loc>", "\n",
+	    "    <h2>$student_to_show</h2>", "\n",
+	    "</div>", "\n",
+	    "<div class=\"container\" align=center>", "\n",
+	    "    <h3>Gallery<h3>", "\n",
+	    @gallery,
+	    "</div>", "\n",
+	    "<table style=\"width:1000px\" align=center>", "\n",
+	    "    <td width=35% valign=top>", "\n",
+	    "        <h3 align=center>Bio</h3>", "\n",
+	    "        <table class=\"table table-striped\" style=\"width:475px\" align=center", "\n",
+	    @bio,
+	    "        </table>", "\n",
+	    "    </td>", "\n",
+	    "    <td width=65% valign=top>", "\n",
+	    "        <h3 align=center>About</h3>", "\n",
+            "        <table class=\"table table-striped\" style=\"width:475px\" align=center>", "\n",
+	    @about,
+            "        </table>", "\n",
+	    "    </td>", "\n",
+	    "</table>", "\n",
+	    "<button type=\"submit\" class=\"btn btn-primary\">Return</button>", "\n",
+	    "</div>", "\n",
 	    hidden("user"),
 	    hidden("pass"),
 	    end_form, "\n",
@@ -514,7 +613,8 @@ sub profile_screen {
 #
 sub page_header {
     return header,	
-           start_html("-title"=>"LOVE2041", -bgcolor=>"#FEDCBA", -head => [ Link( { -rel => 'stylesheet', -type => 'text/css', -href => "https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css"}), ]);
+           start_html("-title"=>"LOVE2041",
+ -head => [ Link( { -rel => 'stylesheet', -type => 'text/css', -href => "https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css"}), ]);
 }
 
 #
@@ -527,4 +627,15 @@ sub page_trailer {
     $html .= join("", map("<!-- $_=".param($_)." -->\n", param())) if $debug;
     $html .= end_html;
     return $html;
+}
+
+sub calc_age {
+    my ($bday, $bmonth, $byear) = @_;
+    my ($day, $month, $year) = (localtime)[3..5];
+    $year += 1900;
+
+    my $age = $year - $byear;
+    $age-- unless sprintf("%02d%02d", $month, $day)
+		>=sprintf("%02d%02d", $bmonth, $bday);
+    return $age;
 }
