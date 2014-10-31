@@ -76,9 +76,9 @@ sub verified {
 sub home_screen {
     if(defined param("page")){
   	if(defined param("next_page")){
-	    $page = param("page") + 10;
+	    $page = param("page") + 8;
 	} elsif(defined param("prev_page")){
-	    $page = param("page") - 10;
+	    $page = param("page") - 8;
 	}
     } else {
 	$page = 0;
@@ -93,31 +93,35 @@ sub home_screen {
     }
     @users = sort @users;
     @gallery = ();
-    push @gallery, "<div align=center style=\"width:1350px; margin:100px auto\">";
-    for my $n ($page..$page + 9){
+    push @gallery, "<div align=center style=\"width:1100px\">";
+    push @gallery, "<div class=\"row\">\n";
+    for my $n ($page..$page + 7){
     	my $prof_pic = $students_dir . "/" . @users[$n] . "/profile.jpg";
-	push @gallery, "<div style=\"float:left; margin:5px\">\n";
-#	push @gallery, image_button(-src=>$prof_pic, -name=>"view_profile", -value=>"@users[$n]", -border=>"1");
-	push @gallery, img{-src=>$prof_pic, -class=>"img-thumbnail"}, "<br>";
-	push @gallery, "<button type=\"submit\" name=\"view_profile\" value=@users[$n] class=\"btn btn-primary btn-sm\">@users[$n]</button>";
-	push @gallery, "</div>\n";
+	push @gallery, "    <div class=\"col-sm-6 col-md-3\">\n";
+	push @gallery, "        <div class=\"thumbnail\">\n";
+	push @gallery, "            <img src=$prof_pic>\n";
+	push @gallery, "            <div class=\"caption\" align=\"left\">\n";
+	push @gallery, "                <h3>$users[$n]</h3>\n";
+	push @gallery, "                <p>Some Description.</p>\n";
+	push @gallery, "                <p><button type=\"submit\" name=\"view_profile\" value=$users[$n] class=\"btn btn-primary\">View Profile</button></p>\n";
+	push @gallery, "            </div>\n";
+	push @gallery, "        </div>\n";
+	push @gallery, "    </div>\n";
     }
-    push @gallery, "</div>";
+    push @gallery, "</div>\n";
+    push @gallery, "</div>\n";
     return  p, "\n",
     	    start_form(-method=>"GET"), "\n",
 	    "<div class=\"container-fluid\" align=center>",
 	    navigation(),
 	    @gallery,
-	    "<div align=center style=\"clear:both; padding-top:50px\">", "\n",
 	    hidden("page"), "\n",
 	    hidden("user"), "\n",
 	    hidden("pass"), "\n",
-	    "<button type=\"submit\" name=\"prev_page\" class=\"btn btn-primary\" align=left>Prev</btn>", "\n",
-#	    submit("prev_page"), "\n".
-	    "<button type=\"submit\" name=\"next_page\" class=\"btn btn-primary\" align=right>Next</btn>", "\n",
-#	    submit("next_page"), "\n",
-	    "</div>", "\n",
-	    submit("logout"), "\n",
+	    "<ul class=\"pager\">", "\n",
+	    "<li class\"previous\"><button type=\"submit\" name=\"prev_page\" class=\"btn btn-primary\" align=left>Prev</btn></li>", "\n",
+	    "<li class=\"next\"><button type=\"submit\" name=\"next_page\" class=\"btn btn-primary\" align=right>Next</btn></li>", "\n",
+	    "</ul>", "\n",
 	    "</div>", "\n",
 	    end_form, "\n",
 	    p, "\n";
@@ -130,8 +134,8 @@ sub navigation {
 	    "        <table class=\"table\" align=center width=\"100%\">", "\n",
 	    "            <tr valign=\"center\">", "\n",
 	    "                <td width=\"33%\" align=\"right\"><span class=\"navbar-brand\">LOVE2041 <small><span class=\"glyphicon glyphicon-heart\"></span> Find yo bae.</small></span></td>", "\n",
-	    "	         <td width=\"34%\" align=\"center\"><button type=\"submit\" name=\"Match Me\" value=\"Match Me\" class=\"btn btn-danger\">Find my Soulmate</button></td>", "\n",
-	    "	         <td width=\"33%\" align=\"center\">", "\n",
+	    "	             <td width=\"34%\" align=\"center\"><button type=\"submit\" name=\"Match Me\" value=\"Match Me\" class=\"btn btn-danger\">Find my Soulmate</button></td>", "\n",
+	    "	             <td width=\"23%\" align=\"center\">", "\n",
 	    "                    <form class=\"navbar-form navbar-left\" role=\"search\">", "\n",
 	    "                        <div class=\"input-group\" align=right style=\"width:300px; margin-left:auto; padding-top:8px\">", "\n",
 	    "                            <input type=\"text\" name=\"find_profile\" class=\"form-control\" placeholder=\"Search\">", "\n",
@@ -139,6 +143,7 @@ sub navigation {
 	    "                        </div>", "\n",
 	    "                    </form>", "\n",
 	    "                </td>", "\n",
+	    "                <td width=\"10%\"><div style=\"text-align:center\">Logged in as $user <button type=\"submit\" name=\"logout\" class=\"btn btn-primary\" align=right>Logout</btn></div></td>", "\n",
 	    "            </tr>", "\n",
             "        </table>", "\n",
 	    "    </div>", "\n",
@@ -404,7 +409,7 @@ sub match_screen {
     }
 
     foreach $candidate (keys %scores){
-	if($scores{$candidate} < 70){
+	if($scores{$candidate} < 60){
 	    delete($scores{$candidate});
 	}
     }
@@ -412,7 +417,7 @@ sub match_screen {
     @soulmates = sort {$scores{$b} <=> $scores{$a}} keys(%scores);
     @table = ();
     foreach(@soulmates){
-	push @table, "<tr><td align=\"right\"><button type=\"submit\" name=\"view_profile\" value=\"$_\">$_</button></td><td align=\"left\">$scores{$_}</td></tr>", "\n";
+	push @table, "<tr><td align=\"right\"><button class=\"btn btn-primary btn-sm\" type=\"submit\" name=\"view_profile\" value=\"$_\">$_</button></td><td align=\"left\">$scores{$_}</td></tr>", "\n";
     }
 
     return  p,
@@ -491,6 +496,7 @@ sub profile_screen {
 
     return  p, "\n",
 	    start_form(-method=>"POST"), "\n",
+	    navigation(),
 	    "<div align=\"center\">", "\n",
 	    img {src=>$prof_pic_loc, border=>"5"}, "\n",
 	    pre($profile),"\n",
