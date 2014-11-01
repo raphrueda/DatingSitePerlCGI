@@ -19,8 +19,7 @@ print page_header();
 $debug = 0;
 $students_dir = "./students";
 
-# if user is logged in
-if(defined param("user") && defined param("pass") && verified(param("user"), param("pass")) && !defined param("logout")){
+if(defined param("user") && defined param("pass") && verified(param("user"), param("pass")) && !defined param("logout") && defined param("login")){
     %user_id = ();
     opendir(my $DIR, $students_dir);
     while(my $entry = readdir $DIR){
@@ -49,6 +48,31 @@ if(defined param("user") && defined param("pass") && verified(param("user"), par
 	print match_screen();
     } else {
 	print home_screen();
+    }
+} elsif(defined param("signup")){
+    print signup_screen();
+} elsif(defined param("create")){
+    my $username = param("username_input");
+    my $password = param("password_input");
+    my $confirm = param("password_confirm");
+    if ($username ne "" && $password ne "" && $confirm ne ""){
+	if ($username =~ /[^a-zA-Z0-9]/){
+	    print "<div class=\"alert alert-danger\" role=\"alert\">Invalid Username</div>", "\n";
+            print signup_screen();
+	} elsif (-d "students/$username"){
+            print "<div class=\"alert alert-danger\" role=\"alert\">Username taken</div>", "\n";
+            print signup_screen();
+	} elsif ($password ne $confirm){
+            print "<div class=\"alert alert-danger\" role=\"alert\">Passwords do not match</div>", "\n";
+            print signup_screen();
+	} else {
+	    create_account($username, $password);
+            print "<div class=\"alert alert-success\" role=\"alert\">Account created</div>", "\n";
+	    print login_screen();
+	}
+    } else {
+        print "<div class=\"alert alert-danger\" role=\"alert\">Please fill in all fields</div>", "\n";
+	print signup_screen();
     }
 } else {
     print login_screen();
@@ -121,6 +145,7 @@ sub home_screen {
 	    hidden("page"), "\n",
 	    hidden("user"), "\n",
 	    hidden("pass"), "\n",
+	    hidden("login"), "\n",
 	    "<ul class=\"pager\">", "\n",
 	    "<li class\"previous\"><button type=\"submit\" name=\"prev_page\" class=\"btn btn-primary\" align=left>Prev</btn></li>", "\n",
 	    "<li class=\"next\"><button type=\"submit\" name=\"next_page\" class=\"btn btn-primary\" align=right>Next</btn></li>", "\n",
@@ -450,6 +475,7 @@ sub match_screen {
 	hidden("user"), "\n",
 	hidden("pass"), "\n",
 	hidden("match_page"), "\n",
+	hidden("login"), "\n",
 	p, "\n";
 }
 
@@ -470,14 +496,71 @@ sub login_screen {
 	    "            </div>", "\n",
 	    "        </div>", "\n",
 	    "        <div>", "\n",
-	    "            <button type=\"submit\" name=\"Login\" class=\"btn btn-success btn-lg\"><span class=\"glyphicon glyphicon-log-in\"></span></button>", "\n",
+	    "            <button type=\"submit\" name=\"login\" class=\"btn btn-success btn-lg\"><span class=\"glyphicon glyphicon-log-in\"></span></button>", "\n",
 	    "        </div>", "\n",
+	    "        <div style=\"margin:20px\">", "\n",
+	    "            <h4><small>Don't have an account?</small></h4>", "\n",
+	    "            <button type=\"submit\" name=\"signup\" class=\"btn btn-primary\">Sign Up</button>", "\n",
+            "        </div>", "\n",
 	    "    </div>", "\n",
 	    "</div>", "\n",
 	    end_form, "\n",
 	    hidden("user"),
 	    hidden("pass"),
 	    p, "\n";
+}
+
+sub signup_screen {
+    return  p, "\n",
+	start_form(-method=>"GET"), "\n",
+	"<div class=\"container\" align=center style=\"margin-top:25vh\">", "\n",
+        "<h1>LOVE2041<small><br>Find yo bae.</small></h1>", "\n",
+        "    <div style=\"width:500px; margin-top:50px\" align=center>", "\n",
+	"        <form class=\"form-horizontal\" role=\"form\">", "\n",
+	"            <div class=\"form-group\">", "\n",
+	"                <label for=\"username_input\" class=\"col-sm-2 control-label\">Username</label>", "\n",
+	"		 <div class=\"col-sm-10\" style=\"margin-bottom:10px\">", "\n",
+	"		     <input type=\"text\" class=\"form-control\" name=\"username_input\" id=\"username_input\" placeholder=\"Username\">", "\n",
+	"		 </div>", "\n",
+	"            </div>", "\n",
+        "            <div class=\"form-group\">", "\n",
+        "                <label for=\"password_input\" class=\"col-sm-2 control-label\">Password</label>", "\n",
+        "                <div class=\"col-sm-10\" style=\"margin-bottom:10px\">", "\n",
+        "                    <input type=\"password\" class=\"form-control\" name=\"password_input\" id=\"password_input\" placeholder=\"Password\">", "\n",
+        "                </div>", "\n",
+        "            </div>", "\n",
+        "            <div class=\"form-group\">", "\n",
+        "                <label for=\"password_confirm\" class=\"col-sm-2 control-label\">Confirm Password</label>", "\n",
+        "                <div class=\"col-sm-10\" style=\"margin-bottom:10px\">", "\n",
+        "                    <input type=\"password\" class=\"form-control\" name=\"password_confirm\" id=\"password_confirm\" placeholder=\"Confirm Password\">", "\n",
+        "                </div>", "\n",
+        "            </div>", "\n",
+        "        </form>", "\n",
+	"	 <div align=center>", "\n",
+        "            <button type=\"submit\" name=\"create\" class=\"btn btn-primary\">Create Account</button>", "\n",
+	"	 </div>", "\n",
+        "    </div>", "\n",
+        "</div>", "\n",
+	end_form, "\n",
+	hidden("username_input");
+	hidden("password_input");
+	hidden("password_confirm");
+	p, "\n";
+}
+
+sub create_account(){
+    my($username, $password) = @_;
+    mkdir "students\/$username" or die "Could not make dir students/$username: $!";
+    my $profile = "students\/$username\/profile.txt";
+    open FILE, '>'.$profile or die "Could not open $profile: $!";
+    print FILE "username:\n";
+    print FILE "	$username\n";
+    print FILE "password:\n";
+    print FILE "	$password\n";
+    close FILE;
+    my $preferences = "students\/$username\/preferences.txt";
+    open FILE, '>'.$preferences or die "Could not open $preferences: $!";
+    close FILE;
 }
 
 sub profile_screen {
@@ -602,8 +685,9 @@ sub profile_screen {
 	    "</table>", "\n",
 	    "<button type=\"submit\" class=\"btn btn-primary\">Return</button>", "\n",
 	    "</div>", "\n",
-	    hidden("user"),
-	    hidden("pass"),
+	    hidden("user"), "\n",
+	    hidden("pass"), "\n",
+	    hidden("login"), "\n",
 	    end_form, "\n",
 	    p, "\n";
 }
