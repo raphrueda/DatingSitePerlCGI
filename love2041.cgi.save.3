@@ -34,7 +34,15 @@ if(defined param("user") && defined param("pass") && verified(param("user"), par
 	param("profile", param("view_profile"));
 	print profile_screen();
     } elsif(defined param("find") && defined param("find_profile")){
-	print find_screen();	
+	if(exists $user_id{param("find_profile")}){
+    	    param("profile", param("find_profile"));
+	    print profile_screen();
+	} else {
+	    print "<div class=\"alert alert-danger alert-dismissable\" role=\"alert\">",
+		  "    User not found",
+		  "</div>", "\n", 
+		  home_screen();
+	}
     } elsif(defined param("match") || defined param("match_page")){
 	print match_screen();
     } else {
@@ -46,8 +54,7 @@ if(defined param("user") && defined param("pass") && verified(param("user"), par
     my $username = param("username_input");
     my $password = param("password_input");
     my $confirm = param("password_confirm");
-    my $email = param("email_input");
-    if ($username ne "" && $password ne "" && $confirm ne "" && $email ne ""){
+    if ($username ne "" && $password ne "" && $confirm ne ""){
 	if ($username =~ /[^a-zA-Z0-9]/){
 	    print "<div class=\"alert alert-danger\" role=\"alert\">Invalid Username</div>", "\n";
             print signup_screen();
@@ -57,11 +64,8 @@ if(defined param("user") && defined param("pass") && verified(param("user"), par
 	} elsif ($password ne $confirm){
             print "<div class=\"alert alert-danger\" role=\"alert\">Passwords do not match</div>", "\n";
             print signup_screen();
-	} elsif ($email !~ /[a-zA-Z0-9]+\@[a-zA-Z0-9]+\.[a-zA-Z0-9]+/){
-	    print "<div class=\"alert alert-danger\" role=\"alert\">Invalid Email</div>", "\n";
-            print signup_screen();
 	} else {
-	    create_account($username, $password, $email);
+	    create_account($username, $password);
             print "<div class=\"alert alert-success\" role=\"alert\">Account created</div>", "\n";
 	    print login_screen();
 	}
@@ -133,7 +137,7 @@ sub home_screen {
     push @gallery, "</div>\n";
     push @gallery, "</div>\n";
     return  p, "\n",
-    	    start_form(-method=>"POST"), "\n",
+    	    start_form(-method=>"GET"), "\n",
 	    "<div class=\"container-fluid\" align=center>",
 	    navigation(),
 	    @gallery,
@@ -171,74 +175,6 @@ sub navigation {
             "        </table>", "\n",
 	    "    </div>", "\n",
 	    "</nav>", "\n";
-}
-
-sub find_screen {
-    my $search = param("find_profile");
-    @students = ();
-    opendir(my $DIR, $students_dir) or die "Could not open dir $students_dir: $!";
-    while(my $entry = readdir $DIR){
-	next unless -d $students_dir . '/' . $entry;
-	next if $entry eq '.' or $entry eq '..';
-	push @students, $entry;
-    }
-    closedir $DIR;
-
-    @search_results = ();
-    my $size = 0;
-    foreach $student(@students){
-	if(index($student, $search) != -1){
-	    $size++;
-	    open F, "$students_dir/$student/profile.txt" or die "could not open $students_dir/$student/profile.txt: $!";
-	    my ($gender, $age);
-	    while($line = <F>){
-		if($line =~ /gender:/){
-		    $line = <F>;
-		    chomp $line;
-		    $gender = $line;
-		    $gender =~ s/\s//g;
-		    $gender = ucfirst($gender);
-		} elsif ($line =~ /birthdate:/){
-		    $line = <F>;
-		    chomp $line;
-		    $birthdate = $line;
-		    $birthdate =~ s/\s//g;
-		    if($birthdate =~ /([0-9]{4})\/([0-9]{2})\/([0-9]{2})/){
-			$age = calc_age($3, $2 - 1, $1);
-		    } elsif($birthdate =~ /([0-9]{2})\/([0-9]{2})\/([0-9]{4})/){
-			$age = calc_age($1, $2 - 1, $3);
-		    }
-		}
-	    }
-	    close F;
-	    push @search_results, "<tr>",
-				  "    <td style=\"text-align:right\">",
-				  "        $student <button class=\"btn btn-primary btn-sm\" type=\"submit\" name=\"view_profile\" value=\"$student\">View Profile</button>",
-				  "    </td>",
-				  "    <td>$gender</td>",
-				  "    <td>$age</td>",
-				  "</tr>", "\n";
-	}
-    }
-
-    return  p,
-        start_form(-method=>"POST"), "\n",
-        "<div class=\"container-fluid\" align=center>", "\n",
-        navigation(),
-        "<h1>", $size, " User(s) Found</h1><br>", "\n",
-        "<table class=\"table table-striped\" style=\"width:auto\">", "\n",
-        "<col align=\"left\"><col align=\"right\">", "\n",
-        "<tr><th style=\"text-align:center\">Username</th><th>Gender</th><th>Age</th></tr>", "\n",
-        @search_results,
-        "</table>", "\n",
-        "<button type=\"submit\" class=\"btn btn-primary\">Return</button>", "\n",
-        "</div>", "\n",
-        end_form(), "\n",
-        hidden("user"), "\n",
-        hidden("pass"), "\n",
-        hidden("match_page"), "\n",
-        hidden("login"), "\n",
-        p, "\n";
 }
 
 sub match_screen {
@@ -521,7 +457,7 @@ sub match_screen {
     }
 
     return  p,
-	start_form(-method=>"POST"), "\n",
+	start_form(-method=>"GET"), "\n",
 	"<div class=\"container-fluid\" align=center>", "\n",
 	navigation(),
 	"<h1>", scalar @soulmates, " Matches Found</h1>", "\n",
@@ -575,7 +511,7 @@ sub login_screen {
 
 sub signup_screen {
     return  p, "\n",
-	start_form(-method=>"POST"), "\n",
+	start_form(-method=>"GET"), "\n",
 	"<div class=\"container\" align=center style=\"margin-top:25vh\">", "\n",
         "<h1>LOVE2041<small><br>Find yo bae.</small></h1>", "\n",
         "    <div style=\"width:500px; margin-top:50px\" align=center>", "\n",
@@ -593,20 +529,13 @@ sub signup_screen {
         "                </div>", "\n",
         "            </div>", "\n",
         "            <div class=\"form-group\">", "\n",
-        "                <label for=\"password_confirm\" class=\"col-sm-2 control-label\">Confirm</label>", "\n",
+        "                <label for=\"password_confirm\" class=\"col-sm-2 control-label\">Confirm Password</label>", "\n",
         "                <div class=\"col-sm-10\" style=\"margin-bottom:10px\">", "\n",
         "                    <input type=\"password\" class=\"form-control\" name=\"password_confirm\" id=\"password_confirm\" placeholder=\"Confirm Password\">", "\n",
         "                </div>", "\n",
         "            </div>", "\n",
-        "            <div class=\"form-group\">", "\n",
-        "                <label for=\"email_input\" class=\"col-sm-2 control-label\">Email</label>", "\n",
-        "                <div class=\"col-sm-10\" style=\"margin-bottom:10px\">", "\n",
-        "                    <input type=\"email\" class=\"form-control\" name=\"email_input\" id=\"email_input\" placeholder=\"Email\">", "\n",
-        "                </div>", "\n",
-        "            </div>", "\n",
         "        </form>", "\n",
 	"	 <div align=center>", "\n",
-        "            <button type=\"submit\" class=\"btn btn-primary\">Return to Login</button>", "\n",
         "            <button type=\"submit\" name=\"create\" class=\"btn btn-primary\">Create Account</button>", "\n",
 	"	 </div>", "\n",
         "    </div>", "\n",
@@ -619,7 +548,7 @@ sub signup_screen {
 }
 
 sub create_account(){
-    my($username, $password, $email) = @_;
+    my($username, $password) = @_;
     mkdir "students\/$username" or die "Could not make dir students/$username: $!";
     my $profile = "students\/$username\/profile.txt";
     open FILE, '>'.$profile or die "Could not open $profile: $!";
@@ -627,17 +556,14 @@ sub create_account(){
     print FILE "	$username\n";
     print FILE "password:\n";
     print FILE "	$password\n";
-    print FILE "email:\n";
-    print FILE "        $email\n";
     close FILE;
-
     my $preferences = "students\/$username\/preferences.txt";
     open FILE, '>'.$preferences or die "Could not open $preferences: $!";
     close FILE;
 }
 
 sub profile_screen {
-    my $profile = "$students_dir/" . param("profile");
+    my $profile = "$student_dir" . param("profile");
     my $profile_filename = "$profile/profile.txt";
     open my $p, "$profile_filename" or die "can not open $profile_filename: $!";
     %details = ();
@@ -654,7 +580,7 @@ sub profile_screen {
     $prof_pic_loc = "$profile/profile.jpg";
 
     %photos = ();
-    opendir(my $DIR, $profile) or die "cannot open dir $profile: $!";
+    opendir(my $DIR, $sprofile) or die "cannot open dir $profile: $!";
     while(my $entry = readdir $DIR){
         next if($entry !~ /^photo[0-9]+\./);
         $photos{$entry}++;
@@ -663,10 +589,10 @@ sub profile_screen {
 
     @gallery = ();
     foreach $photo (keys %photos){
-        push @gallery, "<img src=$profile/$photo class=\"img-thumbnail\" style=\"margin-bottom:5px\">\n";
+        push @gallery, "<img src=$/$photo class=\"img-thumbnail\" style=\"margin-bottom:5px\">\n";
     }
 
-    $profile =~ s/^\.\/students\///;
+    $student_to_show =~ s/^\.\/students\///;
     $birthdate = $details{"birthdate"}[0];
     my $age;
     if($birthdate =~ /([0-9]{2})\/([0-9]{2})\/([0-9]{4})/){
@@ -733,7 +659,7 @@ sub profile_screen {
 	    navigation(),
 	    "<div class=\"jumbotron\" align=\"center\">", "\n",
 	    "    <img class=\"img-circle\" src=$prof_pic_loc>", "\n",
-	    "    <h2>$profile</h2>", "\n",
+	    "    <h2>$student_to_show</h2>", "\n",
 	    "</div>", "\n",
 	    "<div class=\"container\" align=center>", "\n",
 	    "    <h3>Gallery<h3>", "\n",
