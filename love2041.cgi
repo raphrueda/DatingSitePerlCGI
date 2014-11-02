@@ -1,24 +1,24 @@
 #!/usr/bin/perl -w
 
-# written by andrewt@cse.unsw.edu.au September 2013
-# as a starting point for COMP2041/9041 assignment 2
-# http://cgi.cse.unsw.edu.au/~cs2041/assignments/LOVE2041/
+# COMP2041 Assignment 2
+# LOVE2041 Dating Site
+# By Raphael Rueda, z3461774
 
 use CGI qw/:all/;
 use CGI::Carp qw(fatalsToBrowser warningsToBrowser);
 use Data::Dumper;  
 use List::Util qw/min max/;
 use Date::Calc;
-#use Array::Utils qw(:all);
 warningsToBrowser(1);
 
 # print start of HTML ASAP to assist debugging if there is an error in the script
 print page_header();
 
 # some globals used through the script
-$debug = 0;
+$debug = 1;
 $students_dir = "./students";
 
+# if user has supplied valid login details
 if(defined param("user") && defined param("pass") && verified(param("user"), param("pass")) && !defined param("logout") && defined param("login")){
     %user_id = ();
     opendir(my $DIR, $students_dir);
@@ -30,24 +30,27 @@ if(defined param("user") && defined param("pass") && verified(param("user"), par
     foreach my $user(sort keys %user_id){
 	$user_id{$user}++;
     }
-    if(defined param("view_profile")){
+    if(defined param("view_profile")){					# if user clicks on a profile
 	param("profile", param("view_profile"));
 	print profile_screen();
-    } elsif(defined param("find") && defined param("find_profile")){
+    } elsif(defined param("find") && defined param("find_profile")){	# if user uses the search bar
 	print find_screen();	
-    } elsif(defined param("match") || defined param("match_page")){
+    } elsif(defined param("match") || defined param("match_page")){	# if user clicks on the match page
 	print match_screen();
-    } else {
+    } else {								# else, leave them on the home screen
 	print home_screen();
     }
-} elsif(defined param("signup")){
+} elsif(defined param("signup")){			# if user clicks on the signup button 
     print signup_screen();
-} elsif(defined param("create")){
+} elsif(defined param("create")){			# if user clicks on create (in signup screen)
     my $username = param("username_input");
+    my $firstname = ucfirst(param("firstname_input"));
+    my $surname = ucfirst(param("surname_input"));
     my $password = param("password_input");
     my $confirm = param("password_confirm");
     my $email = param("email_input");
-    if ($username ne "" && $password ne "" && $confirm ne "" && $email ne ""){
+    # validity checks on user input
+    if ($username ne "" && $password ne "" && $confirm ne "" && $email ne "" && $firstname ne "" && $surname ne ""){
 	if ($username =~ /[^a-zA-Z0-9]/){
 	    print "<div class=\"alert alert-danger\" role=\"alert\">Invalid Username</div>", "\n";
             print signup_screen();
@@ -61,7 +64,9 @@ if(defined param("user") && defined param("pass") && verified(param("user"), par
 	    print "<div class=\"alert alert-danger\" role=\"alert\">Invalid Email</div>", "\n";
             print signup_screen();
 	} else {
-	    create_account($username, $password, $email);
+	    # everything is okay, make the account
+	    $name = "$firstname $surname";
+	    create_account($username, $password, $email, $name);
             print "<div class=\"alert alert-success\" role=\"alert\">Account created</div>", "\n";
 	    print login_screen();
 	}
@@ -69,6 +74,7 @@ if(defined param("user") && defined param("pass") && verified(param("user"), par
         print "<div class=\"alert alert-danger\" role=\"alert\">Please fill in all fields</div>", "\n";
 	print signup_screen();
     }
+# put user at login screen if details are not supplied (or are incorrect)
 } else {
     print login_screen();
 }	
@@ -76,9 +82,9 @@ if(defined param("user") && defined param("pass") && verified(param("user"), par
 print page_trailer();
 exit 0;	
 
+# function to check the userbase for correct login details
 sub verified {
-    my $user = $_[0];
-    my $pass = $_[1];
+    my ($user, $pass) = @_;
     if(-d "$students_dir/$user"){
 	open F, "$students_dir/$user/profile.txt" or die "can not open$students_dir/$user/profile.txt: $!";
 	while ($line = <F>){
@@ -95,7 +101,9 @@ sub verified {
     return 0;
 }
 
+# function to construct the homepage
 sub home_screen {
+    # page handler
     if(defined param("page")){
   	if(defined param("next_page")){
 	    $page = param("page") + 8;
@@ -107,6 +115,7 @@ sub home_screen {
     }
     param("page", $page);
     my @users = ();
+    # get all students/users
     opendir(my $DIR, $students_dir);
     while(my $entry = readdir $DIR){
 	next unless -d $students_dir . "/" . $entry;
@@ -114,6 +123,7 @@ sub home_screen {
 	push @users, $entry;
     }
     @users = sort @users;
+    # create subset of users to display on page
     @gallery = ();
     push @gallery, "<div align=center style=\"width:1100px\">";
     push @gallery, "<div class=\"row\">\n";
@@ -150,6 +160,7 @@ sub home_screen {
 	    p, "\n";
 }
 
+# function to construct the navbar
 sub navigation {
     $user = param("user");
     return  "<nav class=\"navbar navbar-default\" role=\"navigation\">", "\n",
@@ -173,9 +184,11 @@ sub navigation {
 	    "</nav>", "\n";
 }
 
+# functino to construct the search results screen
 sub find_screen {
     my $search = param("find_profile");
     @students = ();
+    # get all students/users
     opendir(my $DIR, $students_dir) or die "Could not open dir $students_dir: $!";
     while(my $entry = readdir $DIR){
 	next unless -d $students_dir . '/' . $entry;
@@ -184,6 +197,8 @@ sub find_screen {
     }
     closedir $DIR;
 
+    # create a subset of users that contain the search substring
+    # store their gender and age aswell
     @search_results = ();
     my $size = 0;
     foreach $student(@students){
@@ -241,6 +256,7 @@ sub find_screen {
         p, "\n";
 }
 
+# function to construct the match screen
 sub match_screen {
     my $user = param("user");
     
@@ -249,6 +265,7 @@ sub match_screen {
 
     my $student_loc = "$students_dir/$user";
 
+    # construct a hash to store the user's preferences
     open F, "$student_loc/preferences.txt" or die "can not open $student_loc/preferences.txt: $!";
     while($line = <F>){
   	if($line =~ /gender:/){
@@ -289,6 +306,7 @@ sub match_screen {
     }
     close F;
 
+    # construct a hash to store the user's information
     open F, "$student_loc/profile.txt" or die "can not open $student_loc/profile.txt: $!";
     my $n;
     while($line = <F>){
@@ -303,6 +321,7 @@ sub match_screen {
     }
     close F;
 
+    # fill in any missing preferences
     if(!defined @{$my_pref{"gender"}}){
 	push @{$my_pref{"gender"}}, "any"; #assume no gender pref
     }
@@ -335,6 +354,7 @@ sub match_screen {
     }
     closedir $DIR;
 
+    # store user's favourites for later comparison
     %my_movies = ();
     foreach (@{$my_info{"favourite_movies"}}){
 	$my_movies{$_}++;
@@ -360,8 +380,10 @@ sub match_screen {
         $my_courses{$_}++;
     }	
 
+    # search through each user and calculate their compatibility score
     foreach $candidate (@users){
 	$student_loc = "$students_dir/$candidate";
+	# store their info from profile.txt
 	%their_info = ();
 	open F, "$student_loc/profile.txt" or die "can not open $student_loc/profile.txt: $!";
         my $c;
@@ -376,6 +398,7 @@ sub match_screen {
 	}
 	close F;
 
+	# if they're not the preffered gender, skip
 	if($their_info{"gender"}[0] ne $my_pref{"gender"}[0] && $my_pref{"gender"}[0] ne "any"){
 	    $scores{$candidate} = 0;
 	    next;
@@ -386,6 +409,7 @@ sub match_screen {
 	$height_score = 0;	#/20
 	$weight_score = 0;	#/20
 
+	# calculate age from birthdate
 	my $age;
 	if($their_info{"birthdate"}[0] =~ /([0-9]{2})\/([0-9]{2})\/([0-9]{4})/){
 	    $age = calc_age($1, $2 - 1, $3);
@@ -393,6 +417,7 @@ sub match_screen {
 	    $age = calc_age($3, $2 - 1, $1);
 	}
 	
+	# assign points for age
 	if($age >= $my_pref{"age"}[0] && $age <= $my_pref{"age"}[1]){
 	    $age_score = 20;
 	} elsif($age > $my_pref{"age"}[1]){
@@ -401,6 +426,7 @@ sub match_screen {
 	    $age_score = max(0, 20 - ($my_pref{"age"}[0] - $age)*3); #-3 points for each year below 
 	}
 
+	# assign points for hair
 	if($my_pref{"hair"}[0] eq "any"){
 	    $hair_score = 20;
 	} elsif(defined $their_info{"hair_colour"}[0]){
@@ -411,6 +437,7 @@ sub match_screen {
 	    }
 	}
 
+	# assign points for height
 	if($my_pref{"height"}[0] eq "any"){
 	    $height_score = 20;
 	} else {
@@ -430,6 +457,7 @@ sub match_screen {
 	    } 
 	} #no height specified = 0 points
 
+	# assign points for weight
 	if($my_pref{"weight"}[0] eq "any"){
             $weight_score = 20;
         } else {
@@ -451,54 +479,62 @@ sub match_screen {
 
 	$scores{$candidate} = ($age_score + $hair_score + $height_score + $weight_score);
 
+	# allocate bonus points for common favourites
 	$common_score = 0;
-	foreach (@{$their_info{"favourite_movies"}}){
+	foreach (@{$their_info{"favourite_movies"}}){ # 3 points for each movie
 	    if (defined $my_movies{$_}){
 		$common_score += 3;
 	    }
 	}
-	foreach (@{$their_info{"favourite_books"}}){
+	foreach (@{$their_info{"favourite_books"}}){ # 3 points for each book
             if (defined $my_books{$_}){
                 $common_score += 3;
             }
         }
-        foreach (@{$their_info{"favourite_TV_shows"}}){
+        foreach (@{$their_info{"favourite_TV_shows"}}){ # 3 points for each show
             if (defined $my_tv{$_}){
                 $common_score += 3;
             }
         }
-        foreach (@{$their_info{"favourite_bands"}}){
+        foreach (@{$their_info{"favourite_bands"}}){ # 3 points for each band
             if (defined $my_bands{$_}){
                 $common_score += 3;
             }
         }
-        foreach (@{$their_info{"favourite_hobbies"}}){
+        foreach (@{$their_info{"favourite_hobbies"}}){ # 5 points for each hobby
             if (defined $my_hobbies{$_}){
                 $common_score += 5;
             }
         }
-        foreach (@{$their_info{"courses"}}){
+        foreach (@{$their_info{"courses"}}){ # 1 point for each course
             if (defined $my_courses{$_}){
                 $common_score += 1;
             }
         }
-	if(defined($their_info{"degree"}[0]) && defined($my_info{"degree"}[0]) &&$their_info{"degree"}[0] eq $my_info{"degree"}[0]){ $common_score += 5;}
+	if(defined($their_info{"degree"}[0]) && # 5 points for common degree
+	   defined($my_info{"degree"}[0]) &&
+	   $their_info{"degree"}[0] eq $my_info{"degree"}[0]){ 
+	    $common_score += 5;
+	}
 
 	$scores{$candidate} += $common_score;
     }
 
+    # only keep user with a score of atleast 60
     foreach $candidate (keys %scores){
 	if($scores{$candidate} < 60){
 	    delete($scores{$candidate});
 	}
     }
 
+    # sort in descending
     @soulmates = sort {$scores{$b} <=> $scores{$a}} keys(%scores);
     @table = ();
     foreach(@soulmates){
 	push @table, "<tr><td align=\"right\"><button class=\"btn btn-primary btn-sm\" type=\"submit\" name=\"view_profile\" value=\"$_\">$_</button></td><td align=\"left\">$scores{$_}</td></tr>\n";
     }
 
+    # page handler
     my $page = param("match_page") || 0;
     if(defined param("match_next")){
         if($page + 10 <= $#soulmates){
@@ -542,6 +578,7 @@ sub match_screen {
 	p, "\n";
 }
 
+# function to construct the login screen
 sub login_screen {
     return  p, "\n",
 	    start_form(-method=>"POST"), "\n",
@@ -573,6 +610,7 @@ sub login_screen {
 	    p, "\n";
 }
 
+# fucntion to construct the signup screen
 sub signup_screen {
     return  p, "\n",
 	start_form(-method=>"POST"), "\n",
@@ -586,6 +624,18 @@ sub signup_screen {
 	"		     <input type=\"text\" class=\"form-control\" name=\"username_input\" id=\"username_input\" placeholder=\"Username\">", "\n",
 	"		 </div>", "\n",
 	"            </div>", "\n",
+        "            <div class=\"form-group\">", "\n",
+        "                <label for=\"firstname_input\" class=\"col-sm-2 control-label\">Firstname</label>", "\n",
+        "                <div class=\"col-sm-10\" style=\"margin-bottom:10px\">", "\n",
+        "                    <input type=\"text\" class=\"form-control\" name=\"firstname_input\" id=\"firstname_input\" placeholder=\"Firstname\">", "\n",
+        "                </div>", "\n",
+        "            </div>", "\n",
+        "            <div class=\"form-group\">", "\n",
+        "                <label for=\"surname_input\" class=\"col-sm-2 control-label\">Surname</label>", "\n",
+        "                <div class=\"col-sm-10\" style=\"margin-bottom:10px\">", "\n",
+        "                    <input type=\"text\" class=\"form-control\" name=\"surname_input\" id=\"surname_input\" placeholder=\"Surname\">", "\n",
+        "                </div>", "\n",
+        "            </div>", "\n",
         "            <div class=\"form-group\">", "\n",
         "                <label for=\"password_input\" class=\"col-sm-2 control-label\">Password</label>", "\n",
         "                <div class=\"col-sm-10\" style=\"margin-bottom:10px\">", "\n",
@@ -618,8 +668,9 @@ sub signup_screen {
 	p, "\n";
 }
 
+# fucntion to add a user to the userbase
 sub create_account(){
-    my($username, $password, $email) = @_;
+    my($username, $password, $email, $name) = @_;
     mkdir "students\/$username" or die "Could not make dir students/$username: $!";
     my $profile = "students\/$username\/profile.txt";
     open FILE, '>'.$profile or die "Could not open $profile: $!";
@@ -629,6 +680,8 @@ sub create_account(){
     print FILE "	$password\n";
     print FILE "email:\n";
     print FILE "        $email\n";
+    print FILE "name:\n";
+    print FILE "        $name\n";
     close FILE;
 
     my $preferences = "students\/$username\/preferences.txt";
@@ -636,9 +689,11 @@ sub create_account(){
     close FILE;
 }
 
+# function to construct the profile screen
 sub profile_screen {
     my $profile = "$students_dir/" . param("profile");
     my $profile_filename = "$profile/profile.txt";
+    # store all details from profile.txt
     open my $p, "$profile_filename" or die "can not open $profile_filename: $!";
     %details = ();
     while($line = <$p>){
@@ -653,6 +708,7 @@ sub profile_screen {
     close $p;
     $prof_pic_loc = "$profile/profile.jpg";
 
+    # store all the users photos and contruct a gallery
     %photos = ();
     opendir(my $DIR, $profile) or die "cannot open dir $profile: $!";
     while(my $entry = readdir $DIR){
@@ -676,6 +732,7 @@ sub profile_screen {
     }
     my $degree = $details{"degree"}[0];
 
+    # push user's bio in a table format
     @bio = ();
     push @bio, "<tr><td>Age</td><td>$age</td></tr>\n";
     push @bio, "<tr><td>Gender</td><td>" . ucfirst($details{"gender"}[0]) . "</td></tr>\n";
@@ -696,6 +753,7 @@ sub profile_screen {
         push @bio, "<tr><td>Weight</td><td>Unknown</td></tr>\n";
     }
  
+    # push user's about info in a table format
     @about = ();
     push @about, "<tr><td>Favourite Movies</td><td>\n";
     foreach $movie (@{$details{"favourite_movies"}}){
@@ -783,6 +841,8 @@ sub page_trailer {
     return $html;
 }
 
+# function to calculate someone's age given their birthdate
+# based on solution from http://www.perlmonks.org/index.pl?node=9999
 sub calc_age {
     my ($bday, $bmonth, $byear) = @_;
     my ($day, $month, $year) = (localtime)[3..5];
