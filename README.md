@@ -26,3 +26,20 @@ Bonus points are rewarded for each common interest as follows:
     - Course: 1 point(s)
 
 Any candidate that meets a compatibility score of 60+ points is recommended as a possible match.
+
+##Completed
+
+Level 0
+    - Display Dating Profiles [x]
+
+Level 1
+    - Browsing Dating Profiles [x]
+    - Logging In & Out [x]
+    - Search Users [x]
+
+Level 2
+    - Matching Algorithm [x]
+    - Match Results Screen [x]
+
+Level 3
+    - User Account Creation (No email verification) [x]
