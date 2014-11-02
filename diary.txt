@@ -1,0 +1,89 @@
+commit 0a1433ec19407022e0653643448c05c4f8f3c88f
+Author: Raphael <raphrueda@gmail.com>
+Date:   Sun Nov 2 19:14:34 2014 +1100
+
+    Added complete section to readme
+
+commit db80cb654674a50145bfd2993ae78d275899fd72
+Author: Raphael <raphrueda@gmail.com>
+Date:   Sun Nov 2 19:11:19 2014 +1100
+
+    Code cleanup
+
+commit 1dec6edb9684c8adef1b5467524ac338527e3421
+Author: Raphael <raphrueda@gmail.com>
+Date:   Sun Nov 2 02:08:32 2014 +1100
+
+    Added proper search as well as email field for account creation
+
+commit 7b97c962c4461a6c07b1adcbadd1c795cbd6bfe1
+Author: Raphael <raphrueda@gmail.com>
+Date:   Sat Nov 1 21:52:53 2014 +1100
+
+    Added account creation. Backup updated
+
+commit ae96eb7a566c7c3d7fd22e044fe4086fcbbb5758
+Author: Raphael <raphrueda@gmail.com>
+Date:   Sat Nov 1 00:52:47 2014 +1100
+
+    added pages to the match screen, pretty'd up the profile page
+
+commit 977c82e8fe0f8f7d5a001d4ce512fe4d527a1289
+Author: Raphael <raphrueda@gmail.com>
+Date:   Fri Oct 31 17:23:28 2014 +1100
+
+    pretty'd up some stuff
+
+commit 85d91563b2ae39a5e28b049019bcd66ac5f38a98
+Author: Raphael <raphrueda@gmail.com>
+Date:   Fri Oct 31 01:28:57 2014 +1100
+
+    added matching, full explanation to be added in README at a later date
+
+commit d3d62c73c97dc3058648d7607a1093d837afe405
+Author: Raphael <raphrueda@gmail.com>
+Date:   Thu Oct 30 16:08:55 2014 +1100
+
+    backup updated
+
+commit b302f012d764869062d516452235bac4e02c7c7c
+Author: Raphael <raphrueda@gmail.com>
+Date:   Thu Oct 30 01:28:53 2014 +1100
+
+    added navbar
+
+commit 3021a360a06ba6d5a620b477a1c4be95e339c215
+Author: Raphael <raphrueda@gmail.com>
+Date:   Wed Oct 29 15:24:33 2014 +1100
+
+    bootstrapin it
+
+commit 94067fc49e88113002098b76a00002fafd247292
+Author: Raphael <raphrueda@gmail.com>
+Date:   Tue Oct 28 22:58:19 2014 +1100
+
+    Added a homepage (after login) that shows 10 users at a time
+
+commit 589e78473c315d164239f745a5832cb7d4b535b5
+Author: Raphael <raphrueda@gmail.com>
+Date:   Tue Oct 28 16:51:31 2014 +1100
+
+    added prof picture
+
+commit 17de487593abf7ebddb02ab4c35850fb8ab16a25
+Author: Raphael <raphrueda@gmail.com>
+Date:   Mon Oct 27 17:00:58 2014 +1100
+
+    added .gitignore
+
+commit 0787c46a72bb0bddb411a91470a15377c31857e4
+Author: Raphael <raphrueda@gmail.com>
+Date:   Mon Oct 27 16:58:55 2014 +1100
+
+    added readme
+
+commit 32aa93662f5e376bf9898b8ce54793c23a413a5b
+Author: Raphael <raphrueda@gmail.com>
+Date:   Mon Oct 27 16:57:08 2014 +1100
+
+    Inital commit
